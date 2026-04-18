@@ -2,6 +2,7 @@ import os
 import time
 import requests
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 MY_COOKIE = os.getenv("FANZA_COOKIE")#Cookieの取得
@@ -27,7 +28,7 @@ def fetch_purchased_cids():#購入した作品のCIDを取得する関数
 
 
     while True: #ページ取得ループの開始
-        params = {"page": page, "sort": "purchasedate_desc", "genre": all, "limit": limit} #APIリクエストのパラメータを設定
+        params = {"page": page, "sort": "purchasedate_desc", "genre": "all", "limit": limit} #APIリクエストのパラメータを設定
         response = requests.get(api_url, headers=headers, params=params) #APIリクエストの送信
 
         if response.status_code != 200: #APIリクエストが成功しなかった場合のエラーハンドリング
@@ -97,3 +98,31 @@ def fetch_detail_html(cid):  # 詳細HTML取得処理の定義
     if response.status_code != 200:  # ステータスコードの判定
         return None  # Noneの返却
     return response.text  # HTMLテキストの返却
+
+def run_tests(): # テスト実行関数を定義
+    print("=== fetch_purchased_cids のテスト ===") # 開始メッセージの出力
+    purchased_data = fetch_purchased_cids() # 購入済みCID一覧の取得
+    
+    if not purchased_data: # データ有無の判定
+        print("データの取得に失敗、またはCookieが未設定。") # エラーの出力
+        return # 処理の終了
+
+    print(f"取得件数: {len(purchased_data)}件") # 取得件数の出力
+    sample_cid = list(purchased_data.keys())[0] # サンプル用CIDの抽出
+    print(f"サンプルデータ ({sample_cid}):") # 対象CIDの出力
+    print(json.dumps(purchased_data[sample_cid], ensure_ascii=False, indent=2)) # JSON形式での整形出力
+
+    print("\n=== fetch_work_mylists のテスト ===") # 開始メッセージの出力
+    mylists = fetch_work_mylists(sample_cid) # マイリスト情報の取得
+    print(f"CID '{sample_cid}' の登録マイリスト: {mylists}") # 結果の出力
+
+    print("\n=== fetch_detail_html のテスト ===") # 開始メッセージの出力
+    html_text = fetch_detail_html(sample_cid) # 詳細HTMLの取得
+    if html_text: # 取得成功の判定
+        print(f"HTML取得成功 (総文字数: {len(html_text)})") # 文字数の出力
+        print(f"先頭200文字の確認:\n{html_text[:200]}...") # 内容の一部出力
+    else: # 取得失敗の判定
+        print("HTMLの取得に失敗。") # エラーの出力
+
+if __name__ == "__main__": # メインモジュール実行の判定
+    run_tests() # テストの実行
