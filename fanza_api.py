@@ -83,14 +83,17 @@ def fetch_work_mylists(cid): #マイリスト情報取得処理の定義
         print(f"APIリクエストに失敗しました。ステータスコード: {response.status_code}")
         return []
 
-    try:
-        data = response.json() #APIレスポンスをJSON形式で解析
-        items = data.get("data", {}).get("items", []) #マイリストアイテムの取得
-        return [item["mylistName"]] for item in items if item.get("isRegistered") is True] #マイリストに登録されているアイテムのマイリスト名をリストで返す
-    except ValueError: #JSON解析に失敗した場合のエラーハンドリング
-        print("APIレスポンスのJSON解析に失敗しました。")
-        return []
-
-
-    mylists = data.get("data", {}).get("mylists", []) #APIレスポンスからマイリスト情報を取得
-    return mylists #マイリスト情報を返す
+    try:  # 例外処理の開始
+        data = response.json()  # レスポンスのJSONパース
+        items = data.get("data", {}).get("items", [])  # マイリストアイテムの取得
+        return [item["mylistName"] for item in items if item.get("isRegistered") is True]  # 登録済みフォルダ名の抽出と返却
+    except ValueError:  # JSONパースエラー時の捕捉
+        return []  # 空リストの返却
+    
+def fetch_detail_html(cid):  # 詳細HTML取得処理の定義
+    url = f"https://www.dmm.co.jp/dc/doujin/-/detail/=/cid={cid}/"  # 対象URLの構築
+    cookies = {"age_check_done": "1"}  # 年齢確認用Cookieの設定
+    response = requests.get(url, headers=HEADERS, cookies=cookies)  # GETリクエストの送信
+    if response.status_code != 200:  # ステータスコードの判定
+        return None  # Noneの返却
+    return response.text  # HTMLテキストの返却
