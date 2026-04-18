@@ -5,9 +5,6 @@ from dotenv import load_dotenv
 import json
 from requests.exceptions import RequestException
 
-load_dotenv()
-MY_COOKIE = os.getenv("FANZA_COOKIE")#Cookieの取得
-
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",#ブラウザのUser-Agentを指定
     "Accept": "application/json, text/plain, */*" #Acceptヘッダーを指定
@@ -103,11 +100,12 @@ def fetch_work_mylists(cid): #マイリスト情報取得処理の定義
         return []
     
 def fetch_detail_html(cid):  # 詳細HTML取得処理の定義
-    url = f"https://www.dmm.co.jp/dc/doujin/-/detail/=/cid={cid}/"  # 対象URLの構築
-    cookies = {"age_check_done": "1"}  # 年齢確認用Cookieの設定
+    session = get_session() # API通信用のセッションを取得
+    url = f"https://www.dmm.co.jp/dc/doujin/-/detail/=/cid={cid}/" # 対象URLの構築
+    cookies = {"age_check_done": "1"} # 年齢確認用Cookieの定義
 
     try: # GETリクエストの送信
-        response = requests.get(url, headers=HEADERS, cookies=cookies, timeout=10)
+        response = session.get(url, cookies=cookies, timeout=10)
         response.raise_for_status()
         return response.text
     except RequestException as e: # 通信エラーの捕捉
