@@ -11,15 +11,24 @@ HEADERS = {
 }
 MAX_PAGES = 1000 #最大ページ数の設定（安全策として）
 
-def get_session(): #API通信用のセッションを構築
-    load_dotenv() #環境変数の読み込み
-    cookie = os.getenv("FANZA_COOKIE") #Cookieの取得
+# セッションを保持するグローバル変数を定義
+_session = None 
+
+def get_session(): # API通信用のセッションを構築・取得
+    global _session # グローバル変数の宣言
     
-    session = requests.Session() #セッションの作成
-    session.headers.update(HEADERS) #セッションのヘッダーに共通ヘッダーを設定
-    if cookie: #Cookieが存在する場合の処理
-        session.headers.update({"Cookie": cookie}) #セッションのヘッダーにCookieを追加
-    return session
+    if _session is not None: # 既存セッションの判定
+        return _session # 構築済みのセッションを返却
+        
+    load_dotenv() # 環境変数の読み込み
+    cookie = os.getenv("FANZA_COOKIE") # Cookieの取得
+    
+    _session = requests.Session() # セッションの作成
+    _session.headers.update(HEADERS) # セッションのヘッダーに共通ヘッダーを設定
+    if cookie: # Cookieの存在判定
+        _session.headers.update({"Cookie": cookie}) # セッションのヘッダーにCookieを追加
+
+    return _session # 新規作成したセッションを返却
 
 
 def fetch_purchased_cids():#購入した作品のCIDを取得する関数
