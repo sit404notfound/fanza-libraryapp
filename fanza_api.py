@@ -3,6 +3,7 @@ import time
 import requests
 from dotenv import load_dotenv
 import json
+from requests.exceptions import RequestException
 
 load_dotenv()
 MY_COOKIE = os.getenv("FANZA_COOKIE")#Cookieの取得
@@ -11,34 +12,45 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",#ブラウザのUser-Agentを指定
     "Accept": "application/json, text/plain, */*" #Acceptヘッダーを指定
 }
+MAX_PAGES = 1000 #最大ページ数の設定（安全策として）
+
+def get_session(): #API通信用のセッションを構築
+    load_dotenv() #環境変数の読み込み
+    cookie = os.getenv("FANZA_COOKIE") #Cookieの取得
+    
+    session = requests.Session() #セッションの作成
+    session.headers.update(HEADERS) #セッションのヘッダーに共通ヘッダーを設定
+    if cookie: #Cookieが存在する場合の処理
+        session.headers.update({"Cookie": cookie}) #セッションのヘッダーにCookieを追加
+    return session
+
 
 def fetch_purchased_cids():#購入した作品のCIDを取得する関数
-    if not MY_COOKIE:     #Cookieが設定されていない場合のエラーハンドリング
+    session = get_session() #API通信用のセッションを取得
+    if "Cookie" not in session.headers: #セッションにCookieが設定されていない場合のエラーハンドリング
         print("FANZAのCookieが設定されていません。環境変数FANZA_COOKIEにCookieを設定してください。")
-        return{}
+        return {}
     
-    api_url = "https://www.dmm.co.jp/dc/doujin/api/mylibraries/" #FANZAのAPIエンドポイント 
-    headers = HEADERS.copy() #リクエストヘッダーをコピーしてCookieを追加
-    headers["Cookie"] = MY_COOKIE #Cookieの設定
-    headers["Referer"] = "https://www.dmm.co.jp/dc/-/mylibrary/" #Refererヘッダーを設定 
+    api_url = "https://www.dmm.co.jp/dc/doujin/api/mylibraries/"
+    session.headers.update({"Referer": "https://www.dmm.co.jp/dc/-/mylibrary/"}) #Refererヘッダーを設定
 
     purchased_dict = {} #購入した作品のCIDを格納する辞書
     page = 1 #ページ番号の初期化
     limit =50  #1ページあたりの作品数の設定
 
 
-    while True: #ページ取得ループの開始
+    while page <= MAX_PAGES: #ページ取得ループの開始
         params = {"page": page, "sort": "purchasedate_desc", "genre": "all", "limit": limit} #APIリクエストのパラメータを設定
-        response = requests.get(api_url, headers=headers, params=params) #APIリクエストの送信
-
-        if response.status_code != 200: #APIリクエストが成功しなかった場合のエラーハンドリング
-            print(f"APIリクエストに失敗しました。ステータスコード: {response.status_code}")
+        
+        try: # ネットワークリクエストの実行
+            response = session.get(api_url, params=params, timeout=10)
+            response.raise_for_status() # HTTPエラーを捕捉
+            data = response.json()
+        except RequestException as e: # 通信エラーやタイムアウトの捕捉
+            print(f"APIリクエスト時にネットワークエラーが発生: {e}")
             break
-
-        try:
-            data = response.json() #APIレスポンスをJSON形式で解析   
-        except ValueError: #JSON解析に失敗した場合のエラーハンドリング
-            print("APIレスポンスのJSON解析に失敗しました。")
+        except ValueError: # JSONパースエラーの捕捉
+            print("APIレスポンスのJSON解析に失敗。")
             break
 
         items_dict = data.get("data", {}).get("items", {}) #APIレスポンスから作品情報を取得
@@ -66,38 +78,41 @@ def fetch_purchased_cids():#購入した作品のCIDを取得する関数
         page += 1 #次のページへ進むためのページ番号の加算
         time.sleep(1) #APIリクエストの間隔を空ける
 
+    if page > MAX_PAGES: #最大ページ数を超えた場合の警告
+        print(f"警告: 最大ページ数 {MAX_PAGES} に達しました。全てのデータが取得できていない可能性があります。")
+
     return purchased_dict #購入した作品のCIDを格納した辞書を返す
 
 def fetch_work_mylists(cid): #マイリスト情報取得処理の定義
-    if not MY_COOKIE: #Cookieが設定されていない場合のエラーハンドリング
-        print("FANZAのCookieが設定されていません。環境変数FANZA_COOKIEにCookieを設定してください。")
+    session = get_session()
+    if "Cookie" not in session.headers:
+        print("FANZAのCookieが設定されていません。")
         return []
     
-    api_url = "https://www.dmm.co.jp/dc/doujin/api/mylibrary-mylists/" #マイリスト用のエンドポイントの定義
-    headers = HEADERS.copy() #リクエストヘッダーをコピーしてCookieを追加
-    headers["Cookie"] = MY_COOKIE #Cookieの設定
-    headers["Referer"] = "https://www.dmm.co.jp/dc/-/mylibrary/" #Refererヘッダーを設定
+    api_url = "https://www.dmm.co.jp/dc/doujin/api/mylibrary-mylists/"
+    session.headers.update({"Referer": "https://www.dmm.co.jp/dc/-/mylibrary/"})
 
-    response = requests.get(api_url, headers=headers, params={"productId": cid}) #APIリクエストの送信
-
-    if response.status_code != 200: #APIリクエストが成功しなかった場合のエラーハンドリング
-        print(f"APIリクエストに失敗しました。ステータスコード: {response.status_code}")
+    try: # APIリクエストの送信
+        response = session.get(api_url, params={"productId": cid}, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        items = data.get("data", {}).get("items", [])
+        return [item["mylistName"] for item in items if item.get("isRegistered") is True]
+    except (RequestException, ValueError) as e: # エラーの捕捉
+        print(f"マイリスト取得エラー (CID: {cid}): {e}")
         return []
-
-    try:  # 例外処理の開始
-        data = response.json()  # レスポンスのJSONパース
-        items = data.get("data", {}).get("items", [])  # マイリストアイテムの取得
-        return [item["mylistName"] for item in items if item.get("isRegistered") is True]  # 登録済みフォルダ名の抽出と返却
-    except ValueError:  # JSONパースエラー時の捕捉
-        return []  # 空リストの返却
     
 def fetch_detail_html(cid):  # 詳細HTML取得処理の定義
     url = f"https://www.dmm.co.jp/dc/doujin/-/detail/=/cid={cid}/"  # 対象URLの構築
     cookies = {"age_check_done": "1"}  # 年齢確認用Cookieの設定
-    response = requests.get(url, headers=HEADERS, cookies=cookies)  # GETリクエストの送信
-    if response.status_code != 200:  # ステータスコードの判定
-        return None  # Noneの返却
-    return response.text  # HTMLテキストの返却
+
+    try: # GETリクエストの送信
+        response = requests.get(url, headers=HEADERS, cookies=cookies, timeout=10)
+        response.raise_for_status()
+        return response.text
+    except RequestException as e: # 通信エラーの捕捉
+        print(f"HTML取得エラー (CID: {cid}): {e}")
+        return None
 
 def run_tests(): # テスト実行関数を定義
     print("=== fetch_purchased_cids のテスト ===") # 開始メッセージの出力
