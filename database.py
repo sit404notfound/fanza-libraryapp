@@ -1,1 +1,1 @@
-print('hanamizu')
+print('確認用')
