@@ -1,29 +1,28 @@
-import requests
+import sqlite3
 import bs4
 import os
-import re
+import requests
 import json
 from dotenv import load_dotenv
 
-MYPURCHASES_API_URL = "https://www.dmm.co.jp/dc/doujin/api/mylibraries/?page=1&sort=purchasedate_desc&genre=all&limit=20"
+#スクレイピングでデータを取り出し、jsonファイル形式で保存する
+def scrape_fetch_purchased():
 
-#APIとスクレイピングでデータを取り出し、jsonファイル形式で保存する
-def fetch_purchased_data():
+    #データベースに接続
+    con = sqlite3.connect("fanza_data.db")
 
-    #cookieをenvファイルから呼び出し
-    load_dotenv()
-    FANZA_COOKIE = {"cookie": os.getenv("FANZA_COOKIE")}
+    #カーソルを生成
+    cur = con.cursor()
 
-    #変数代入
-    API_MAX_PAGES = 1000
-    API_max_items = 20
-    HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"}
-    
-    #requestsでAPIにアクセスしてjson形式に変換
-    API_response = requests.get(url=MYPURCHASES_API_URL, headers=HEADERS, cookies=FANZA_COOKIE).json()
+    #テーブルの商品IDを取得
+    cur.execute("SELECT contentId FROM = ?")
+    purchases_ID = cur.fetchall()
 
-    #API_response.jsonにAPIのデータを保存
-    with open("API_response.json", "w", encoding="utf-8") as f:
-        json.dump(API_response, f, ensure_ascii=False, indent=4)
+    for id in purchases_ID():
+        print(id)
+    #取得した商品IDのwebページにアクセス
+    #スクレイピングで足りない商品情報を取り出す
+    #IDとその他商品情報でまとめられた辞書のリストをjson形式で保存
+    #待機時間0.5
 
-fetch_purchased_data()
+scrape_fetch_purchased()
