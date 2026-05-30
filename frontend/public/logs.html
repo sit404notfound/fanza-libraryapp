@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>System Logs - FANZA Ultimate Manager</title>
+  <style>
+    body {
+      background-color: #08090d;
+      color: #9da5c4;
+      font-family: 'Consolas', 'Courier New', Courier, monospace;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      font-size: 12px;
+    }
+    header {
+      background-color: #0f111a;
+      border-bottom: 1px solid #1c1f30;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin: 0;
+      font-size: 14px;
+      color: #a855f7;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .controls {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    button, select {
+      background-color: #161824;
+      border: 1px solid #2d314d;
+      color: #fff;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background-color: #7c3aed;
+      border-color: #7c3aed;
+    }
+    .console {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background-color: #050608;
+    }
+    .log-line {
+      display: flex;
+      gap: 12px;
+      line-height: 1.5;
+    }
+    .timestamp {
+      color: #4b526d;
+      white-space: nowrap;
+    }
+    .level {
+      font-weight: bold;
+      width: 60px;
+      text-align: center;
+      border-radius: 3px;
+      font-size: 10px;
+      padding: 1px 4px;
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .level-INFO {
+      color: #10b981;
+      background-color: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .level-WARNING {
+      color: #f59e0b;
+      background-color: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+    .level-ERROR {
+      color: #ef4444;
+      background-color: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    .level-DEBUG {
+      color: #6366f1;
+      background-color: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+    .message {
+      word-break: break-all;
+      white-space: pre-wrap;
+      color: #e2e8f0;
+    }
+    .auto-scroll-label {
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>
+      <span>⚡</span> System Activity Monitor
+    </h1>
+    <div class="controls">
+      <label class="auto-scroll-label">
+        <input type="checkbox" id="autoScroll" checked> Auto-Scroll
+      </label>
+      <select id="levelFilter">
+        <option value="ALL">ALL LEVELS</option>
+        <option value="INFO">INFO</option>
+        <option value="WARNING">WARNING</option>
+        <option value="ERROR">ERROR</option>
+        <option value="DEBUG">DEBUG</option>
+      </select>
+      <button id="clearBtn">Clear View</button>
+    </div>
+  </header>
+  <div class="console" id="console">
+    <div class="log-line">
+      <span class="timestamp">-</span>
+      <span class="level level-INFO">INFO</span>
+      <span class="message">ログストリームの接続中...</span>
+    </div>
+  </div>
+
+  <script>
+    const consoleDiv = document.getElementById('console');
+    const autoScrollCheck = document.getElementById('autoScroll');
+    const levelFilterSelect = document.getElementById('levelFilter');
+    const clearBtn = document.getElementById('clearBtn');
+    
+    let lastLogCount = 0;
+    let allLogs = [];
+
+    // ログ情報取得処理
+    async function fetchLogs() {
+      try {
+        const response = await fetch('/api/system/logs');
+        if (!response.ok) return;
+        const logs = await response.json();
+        
+        // 変化のない場合は更新スキップ
+        if (logs.length === lastLogCount && allLogs.length > 0) return;
+        
+        allLogs = logs;
+        lastLogCount = logs.length;
+        renderLogs();
+      } catch (err) {
+        console.error("ログ取得エラー", err);
+      }
+    }
+
+    // ログ描画処理
+    function renderLogs() {
+      const filter = levelFilterSelect.value;
+      consoleDiv.innerHTML = '';
+      
+      const filtered = allLogs.filter(log => {
+        if (filter === 'ALL') return true;
+        return log.level === filter;
+      });
+
+      if (filtered.length === 0) {
+        consoleDiv.innerHTML = '<div class="log-line"><span class="message" style="opacity: 0.5;">表示対象のログはありません。</span></div>';
+        return;
+      }
+
+      filtered.forEach(log => {
+        const line = document.createElement('div');
+        line.className = 'log-line';
+        
+        // メッセージのHTMLエスケープ処理
+        const safeMsg = log.message
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+        line.innerHTML = `
+          <span class="timestamp">[${log.timestamp}]</span>
+          <span class="level level-${log.level}">${log.level}</span>
+          <span class="message">${safeMsg}</span>
+        `;
+        consoleDiv.appendChild(line);
+      });
+
+      if (autoScrollCheck.checked) {
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+      }
+    }
+
+    // 表示ログクリア処理
+    clearBtn.addEventListener('click', () => {
+      allLogs = [];
+      lastLogCount = 0;
+      consoleDiv.innerHTML = '<div class="log-line"><span class="message" style="opacity: 0.5;">表示をクリアしました。</span></div>';
+    });
+
+    // フィルター変更ハンドリング
+    levelFilterSelect.addEventListener('change', renderLogs);
+
+    // 定期ポーリング処理の開始
+    setInterval(fetchLogs, 1000);
+    fetchLogs();
+  </script>
+</body>
+</html>
