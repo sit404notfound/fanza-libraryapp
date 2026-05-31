@@ -147,7 +147,7 @@ def api_session_check():
 def api_sync_start():
     """同期処理開始エンドポイント"""
     data = request.json or {}
-    mode = data.get('mode', 'quick')  # quick or full
+    mode = data.get('mode', 'quick')  # quick, full, repair
     
     # 有効なCookieを持つセッションの取得
     session = db_session.query(UserSession).filter_by(is_active=True).order_by(UserSession.updated_at.desc()).first()

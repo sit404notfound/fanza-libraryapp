@@ -3,7 +3,7 @@ import {
   Search, Settings, RefreshCw, Play, Download, User, 
   ExternalLink, Lock, Sun, Moon, Calendar, DollarSign, 
   CheckCircle, AlertCircle, Loader, Volume2, BookOpen, X, Terminal,
-  Maximize2, Minimize2, Folder
+  Maximize2, Minimize2, Folder, Wrench
 } from 'lucide-react';
 import type { Work, WorkDetail, SyncStatus, AuthStatus, DownloadStatus } from './types';
 
@@ -401,7 +401,7 @@ export default function App() {
   };
 
   // 同期の開始処理
-  const handleStartSync = async (mode: 'quick' | 'full') => {
+  const handleStartSync = async (mode: 'quick' | 'full' | 'repair') => {
     try {
       const res = await fetch('/api/sync/start', {
         method: 'POST',
@@ -548,6 +548,16 @@ export default function App() {
             className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 ${theme === 'dark' ? 'border-white/10 hover:bg-white/5 text-white' : 'border-slate-200 hover:bg-slate-50 text-slate-700'}`}
           >
             フル同期
+          </button>
+
+          {/* 修復同期ボタン */}
+          <button 
+            onClick={() => handleStartSync('repair')}
+            disabled={syncStatus.status !== 'idle' && syncStatus.status !== 'complete' && syncStatus.status !== 'failed'}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 ${theme === 'dark' ? 'border-amber-800/30 hover:bg-amber-950/20 text-amber-400' : 'border-amber-200 hover:bg-amber-50 text-amber-700'}`}
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            修復同期
           </button>
 
           <div className="h-6 w-[1px] bg-slate-700/30"></div>
