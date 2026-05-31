@@ -8,9 +8,11 @@ export interface Work {
   purchase_date: string; // 購入日
   is_mylist_registered: boolean; // マイリスト登録フラグ
   main_image: string | null; // メイン画像URL
-  price: number; // 価格
-  list_price: number; // 定価
-  purchase_price: number | null; // 購入価格
+  price: number; // 価格 (現在の販売価格)
+  list_price: number; // 定価 (サークル設定価格)
+  sale_price: number | null; // セール価格 (割引適用後)
+  purchase_price: number | null; // 購入価格 (手動記録)
+  campaign_text: string | null; // セール情報テキスト (例: "80%OFF")
   local_path: string | null; // ローカル絶対パス
 }
 

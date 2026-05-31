@@ -818,10 +818,13 @@ export default function App() {
                       <div className="text-[10px] font-semibold text-right">
                         {work.purchase_price !== null && work.purchase_price !== undefined ? (
                           <span className="text-emerald-500 font-bold">購入: {work.purchase_price.toLocaleString()}円</span>
-                        ) : (work.list_price > 0 && work.price < work.list_price) ? (
-                          <div className="flex flex-col items-end leading-none">
-                            <span className="text-rose-500 font-bold">{work.price.toLocaleString()}円</span>
-                            <span className="text-slate-500 line-through scale-90 origin-right mt-0.5">{work.list_price.toLocaleString()}円</span>
+                        ) : work.campaign_text && work.sale_price ? (
+                          <div className="flex flex-col items-end leading-none gap-0.5">
+                            <span className="text-[8px] px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 font-bold">{work.campaign_text}</span>
+                            <span className="text-rose-500 font-bold">{work.sale_price.toLocaleString()}円</span>
+                            {work.list_price > 0 && work.list_price !== work.sale_price && (
+                              <span className="text-slate-500 line-through scale-90 origin-right">{work.list_price.toLocaleString()}円</span>
+                            )}
                           </div>
                         ) : work.list_price > 0 ? (
                           <span className="text-amber-500">{work.list_price.toLocaleString()}円</span>
@@ -1012,9 +1015,10 @@ export default function App() {
                         <span className="flex items-center gap-1 text-amber-500 font-semibold">
                           <DollarSign className="w-3.5 h-3.5" />
                           定価: {selectedWork.list_price.toLocaleString()}円
-                          {selectedWork.price < selectedWork.list_price && (
-                            <span className="text-rose-500 font-bold ml-1.5 bg-rose-500/10 px-1.5 py-0.5 rounded">
-                              セール中: {selectedWork.price.toLocaleString()}円
+                          {selectedWork.campaign_text && selectedWork.sale_price && selectedWork.sale_price < selectedWork.list_price && (
+                            <span className="text-rose-500 font-bold ml-1.5 bg-rose-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <span className="text-[10px] bg-rose-500 text-white px-1 py-px rounded">{selectedWork.campaign_text}</span>
+                              {selectedWork.sale_price.toLocaleString()}円
                             </span>
                           )}
                         </span>
